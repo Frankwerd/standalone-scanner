@@ -1,912 +1,330 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>G•GRIP OMS - Operational Terminal</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "on-tertiary-fixed": "#1b1c1c",
-            "secondary-fixed": "#e2e1eb",
-            "on-surface": "#e2e1eb",
-            "primary": "#ffb68e",
-            "secondary": "#c6c6cf",
-            "on-secondary-fixed": "#1a1b22",
-            "background": "#12131a",
-            "surface-variant": "#33343c",
-            "on-tertiary-container": "#3a3939",
-            "on-secondary": "#2f3037",
-            "tertiary": "#c8c6c5",
-            "surface-container-low": "#1a1b22",
-            "primary-container": "#ff7f29",
-            "primary-fixed-dim": "#ffb68e",
-            "on-primary-fixed": "#331200",
-            "surface-container": "#1e1f26",
-            "secondary-container": "#45464e",
-            "on-primary-container": "#622800",
-            "inverse-on-surface": "#2f3037",
-            "on-surface-variant": "#dfc0b1",
-            "on-error": "#690005",
-            "error-container": "#93000a",
-            "outline": "#a68b7e",
-            "inverse-surface": "#e2e1eb",
-            "on-error-container": "#ffdad6",
-            "surface-container-highest": "#33343c",
-            "surface-bright": "#383940",
-            "surface-dim": "#12131a",
-            "on-background": "#e2e1eb",
-            "surface-container-high": "#282a31",
-            "on-tertiary": "#303030",
-            "on-primary-fixed-variant": "#773300",
-            "surface-container-lowest": "#0c0e14",
-            "on-secondary-fixed-variant": "#45464e",
-            "tertiary-container": "#a4a3a2",
-            "surface": "#12131a",
-            "on-primary": "#542200",
-            "on-tertiary-fixed-variant": "#474746",
-            "secondary-fixed-dim": "#c6c6cf",
-            "on-secondary-container": "#b4b4bd",
-            "inverse-primary": "#9c4500",
-            "surface-tint": "#ffb68e",
-            "primary-fixed": "#ffdbca",
-            "outline-variant": "#574237",
-            "tertiary-fixed": "#e4e2e1",
-            "tertiary-fixed-dim": "#c8c6c5",
-            "error": "#ffb4ab"
-          },
-          fontFamily: {
-            "headline": ["Space Grotesk"],
-            "body": ["Inter"],
-            "label": ["Inter"]
-          },
-          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
-        },
-      },
-    }
-  </script>
-  <style>
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      vertical-align: middle;
-    }
-    body { font-family: 'Inter', sans-serif; }
-    h1, h2, h3, .font-headline { font-family: 'Space Grotesk', sans-serif; }
-    .glass-panel {
-      background: rgba(51, 52, 60, 0.6);
-      backdrop-filter: blur(12px);
-    }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic Inventory - Standalone Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        .scan-region-highlight { border: 2px solid #f97316 !important; border-radius: 1rem !important; }
+    </style>
 </head>
-<body class="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+    <div class="max-w-xl mx-auto space-y-6">
+        <header class="text-center space-y-2">
+            <h1 class="text-4xl font-black tracking-tighter text-orange-500 uppercase italic">Kinetic</h1>
+            <p class="text-[10px] text-slate-400 font-bold tracking-[0.3em] uppercase">Inventory API Terminal // Standalone</p>
+        </header>
 
-  <!-- Navigation Top Bar -->
-  <nav class="fixed top-0 left-0 right-0 z-[110] h-16 flex justify-between items-center px-6 bg-[#12131a] border-b border-outline-variant/10">
-    <div class="flex items-center gap-4">
-      <button onclick="toggleSidebar(true)" class="md:hidden text-on-surface hover:bg-surface-variant p-2 rounded transition-colors">
-        <span class="material-symbols-outlined">menu</span>
-      </button>
-      <div class="flex items-center gap-2">
-        <span class="text-xl font-black tracking-tighter text-[#FF7F29]">G•GRIP</span>
-        <span class="text-xl font-light tracking-tighter text-on-surface">OMS</span>
-      </div>
-      <div class="h-4 w-[1px] bg-outline-variant/30 hidden md:block"></div>
-      <span class="font-label text-[10px] tracking-[0.05em] text-secondary/60 hidden md:block uppercase">Operational Terminal // STN_04</span>
-    </div>
-    <div class="flex items-center gap-2 sm:gap-6">
-      <div id="refreshIndicator" class="hidden items-center bg-surface-container-low px-2 sm:px-3 py-1.5 rounded-sm cursor-pointer" onclick="refreshCurrentView()">
-        <span class="material-symbols-outlined text-sm sm:mr-2 text-primary animate-spin" id="refreshIcon">sync</span>
-        <span class="font-label text-[10px] tracking-wider text-secondary hidden sm:inline">REFRESHING...</span>
-      </div>
-      <div id="liveIndicator" class="hidden items-center bg-surface-container-low px-2 sm:px-3 py-1.5 rounded-sm">
-        <span class="material-symbols-outlined text-sm sm:mr-2 text-primary">sensors</span>
-        <span class="font-label text-[10px] tracking-wider text-secondary hidden sm:inline">SYSTEM LIVE</span>
-      </div>
-      <div class="flex items-center gap-4">
-        <span class="material-symbols-outlined text-on-surface-variant hover:bg-[#33343c] p-2 transition-colors cursor-pointer" onclick="handleLogout()">logout</span>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Sidebar Overlay -->
-  <div id="sidebarOverlay" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] hidden opacity-0 md:hidden transition-opacity duration-300"></div>
-
-  <!-- Sidebar -->
-  <aside id="sidebar" class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 pt-8 flex flex-col bg-[#1a1b22] z-[60] md:z-40 -translate-x-full md:translate-x-0 transition-transform duration-300 border-r border-outline-variant/5">
-    <div class="px-6 mb-8">
-      <h2 class="text-[#FF7F29] font-black font-headline tracking-tight text-sm">MISSION CONTROL</h2>
-      <p class="font-label text-[10px] text-secondary/60 tracking-widest">v2.6.0-ACTIVE</p>
-    </div>
-    <nav class="flex-1 space-y-1 overflow-y-auto no-scrollbar">
-      <a onclick="switchView('lifecycle')" id="nav-lifecycle" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">analytics</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Lifecycle</span>
-      </a>
-      <a onclick="switchView('shipping-perf')" id="nav-shipping-perf" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">local_shipping</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Shipping Perf</span>
-      </a>
-      <a onclick="switchView('revenue')" id="nav-revenue" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">payments</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Revenue</span>
-      </a>
-      <a onclick="switchView('exceptions')" id="nav-exceptions" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">warning</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Exceptions</span>
-      </a>
-      <a onclick="switchView('product-perf')" id="nav-product-perf" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">inventory_2</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Product Perf</span>
-      </a>
-      <a onclick="switchView('inventory')" id="nav-inventory" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">warehouse</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Inventory</span>
-      </a>
-      <div class="border-t border-outline-variant/10 my-2"></div>
-      <a onclick="switchView('pending-sn')" id="nav-pending-sn" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">barcode_scanner</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Pending S/N</span>
-      </a>
-      <a onclick="switchView('pending-shipping')" id="nav-pending-shipping" class="nav-item flex items-center px-6 py-4 text-[#c6c6cf] hover:text-[#e2e1eb] hover:bg-[#33343c] transition-all cursor-pointer">
-        <span class="material-symbols-outlined mr-4">departure_board</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Pending Ship</span>
-      </a>
-      <div class="border-t border-outline-variant/10 my-2"></div>
-      <a id="scannerNavLink" href="https://frankwerd.github.io/standalone-scanner/" target="_blank" class="flex items-center px-6 py-4 text-primary hover:bg-[#33343c] transition-all cursor-pointer no-underline">
-        <span class="material-symbols-outlined mr-4">rocket_launch</span>
-        <span class="font-label text-xs font-bold tracking-wider uppercase">Open Scanner</span>
-      </a>
-    </nav>
-  </aside>
-
-  <!-- Main Content Area -->
-  <main class="ml-0 md:ml-64 mt-16 p-6 md:p-12 h-[calc(100vh-64px)] overflow-y-auto no-scrollbar pb-32">
-    <div class="max-w-7xl mx-auto space-y-12">
-
-      <!-- Header Area -->
-      <header class="flex flex-col items-start md:flex-row md:justify-between md:items-start gap-12 pt-4">
-        <div>
-          <h1 id="viewTitle" class="text-4xl font-headline font-bold tracking-tight text-on-surface">Dashboard</h1>
-          <p id="viewSubtitle" class="text-secondary mt-1 font-body">Overview of operational metrics</p>
-        </div>
-        <div id="viewMetrics" class="flex flex-wrap gap-4 md:gap-8">
-          <!-- Metrics injected here -->
-        </div>
-      </header>
-
-      <!-- Search & Filters -->
-      <div class="bg-surface-container-low p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start md:items-center border border-outline-variant/10">
-        <div class="relative w-full md:flex-grow md:max-w-md">
-          <span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary text-sm">search</span>
-          <input type="text" id="globalSearch" onkeyup="applyLocalFilters()" placeholder="Search records..." class="w-full bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/40 rounded px-10 py-2 text-sm text-on-surface placeholder:text-secondary/40">
-        </div>
-        <select id="channelFilter" onchange="applyLocalFilters()" class="w-full md:w-auto bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/40 rounded px-4 py-2 text-sm text-on-surface">
-          <option value="ALL">All Channels</option>
-          <option value="SamCart">SamCart</option>
-          <option value="Amazon">Amazon</option>
-        </select>
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-          <select id="timeFilter" onchange="handleTimeFilterChange()" class="w-full md:w-auto bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/40 rounded px-4 py-2 text-sm text-on-surface">
-            <option value="ALL">All Time</option>
-            <option value="TODAY">Today</option>
-            <option value="WEEK">Last 7 Days</option>
-            <option value="MONTH">Last 30 Days</option>
-            <option value="YEAR">Last 365 Days</option>
-            <option value="CUSTOM">Custom Range</option>
-          </select>
-          <div id="customDateRange" class="hidden flex items-center gap-2">
-            <input type="date" id="startDate" class="bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-2 text-xs text-on-surface">
-            <span class="text-secondary/40 text-xs">to</span>
-            <input type="date" id="endDate" class="bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-2 text-xs text-on-surface">
-            <button onclick="refreshCurrentView()" class="p-2 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-all">
-              <span class="material-symbols-outlined text-sm">done</span>
+        <!-- Config Section -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+            <button onclick="toggleConfig()" class="w-full flex items-center justify-between text-slate-400 hover:text-orange-500 transition-colors">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">settings</span>
+                    <h2 class="text-[10px] font-black uppercase tracking-widest">Configuration</h2>
+                </div>
+                <span id="configChevron" class="material-symbols-outlined transition-transform">expand_more</span>
             </button>
-          </div>
+            <div id="configContent" class="hidden space-y-3 pt-2">
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Google Script URL</label>
+                    <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"
+                           class="w-full bg-slate-900 border-none rounded-lg p-3 text-xs focus:ring-1 focus:ring-orange-500 transition-all outline-none">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">OMS API Token</label>
+                    <input type="password" id="apiToken" placeholder="Enter Token..."
+                           class="w-full bg-slate-900 border-none rounded-lg p-3 text-xs focus:ring-1 focus:ring-orange-500 transition-all outline-none">
+                </div>
+            </div>
         </div>
-        <div class="hidden md:block flex-grow"></div>
-        <div class="flex items-center gap-2 px-3 py-2 bg-surface-container-highest/50 rounded border border-outline-variant/10">
-          <input type="checkbox" id="devMode" class="w-4 h-4 bg-surface-container-lowest border-none rounded text-primary focus:ring-0 focus:ring-offset-0">
-          <label for="devMode" class="font-label text-[10px] tracking-widest text-secondary uppercase cursor-pointer select-none">Developer Mode</label>
-        </div>
-        <button onclick="refreshCurrentView()" class="w-full md:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-surface-container-highest hover:bg-primary/20 text-secondary hover:text-primary transition-all rounded text-xs font-bold tracking-widest uppercase">
-          <span class="material-symbols-outlined text-sm">refresh</span>
-          Refresh
-        </button>
-      </div>
 
-      <!-- Charts Area -->
-      <div id="chartsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="bg-surface-container p-6 rounded-lg border border-outline-variant/10">
-          <h3 id="chart1Title" class="text-xs font-bold tracking-widest text-secondary mb-6 uppercase">Distribution</h3>
-          <div class="h-[250px] relative">
-            <canvas id="chart1"></canvas>
-          </div>
+        <!-- Scanner UI -->
+        <div class="relative group">
+            <div id="reader" class="rounded-3xl overflow-hidden border-2 border-slate-700 bg-black shadow-2xl min-h-[400px] w-full"></div>
+            <div id="scanOverlay" class="hidden absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+                <div class="text-[10px] font-black text-white bg-black/60 px-4 py-2 rounded-full uppercase tracking-widest border border-white/20">Center Barcode in Box</div>
+            </div>
+            <div id="readerPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-800 rounded-3xl border-2 border-dashed border-slate-600 z-10">
+                <span class="material-symbols-outlined text-5xl text-slate-600 mb-4">videocam_off</span>
+                <button onclick="startScanner()" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95">
+                    Initialize Camera
+                </button>
+            </div>
         </div>
-        <div class="bg-surface-container p-6 rounded-lg border border-outline-variant/10">
-          <h3 id="chart2Title" class="text-xs font-bold tracking-widest text-secondary mb-6 uppercase">Performance</h3>
-          <div class="h-[250px] relative">
-            <canvas id="chart2"></canvas>
-          </div>
+
+        <!-- Controls -->
+        <div id="controls" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Action</label>
+                    <select id="scanAction" class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold text-orange-500 focus:ring-1 focus:ring-orange-500 outline-none cursor-pointer appearance-none">
+                        <option value="Production">🏭 Production</option>
+                        <option value="Shipping">📦 Shipping</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Quantity</label>
+                    <input type="number" id="scanQty" value="1" min="1"
+                           class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-orange-500 outline-none text-center">
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Manual SKU Entry</label>
+                <div class="flex gap-2">
+                    <input type="text" id="manualSku" placeholder="WAITING FOR SCAN..."
+                           class="flex-1 bg-slate-900 border-none rounded-xl p-4 text-sm font-mono tracking-wider focus:ring-1 focus:ring-orange-500 outline-none uppercase placeholder:text-slate-700">
+                    <button onclick="handleManualSubmit()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 rounded-xl font-black text-xs uppercase tracking-widest transition-all">Submit</button>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <!-- Main Data Table Container -->
-      <div id="tableContainer" class="bg-surface-container p-1 rounded-lg">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left">
-            <thead id="tableHead" class="bg-surface-container-low border-b border-outline-variant/5">
-              <!-- Headers injected here -->
-            </thead>
-            <tbody id="tableBody" class="divide-y divide-outline-variant/5">
-              <!-- Rows injected here -->
-            </tbody>
-          </table>
+        <!-- Status Panel -->
+        <!-- Actions & Info -->
+        <div class="flex items-center justify-between px-2">
+            <div id="scannerIndicator" class="hidden items-center gap-2">
+                <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(249,115,22,0.8)]"></div>
+                <span class="text-[10px] font-black text-orange-500 uppercase tracking-widest">Scanner Active</span>
+            </div>
+            <button id="stopScannerBtn" onclick="stopScanner()" class="hidden text-slate-500 hover:text-red-500 transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">cancel</span>
+                <span class="text-[10px] font-black uppercase tracking-widest">Stop Scanner</span>
+            </button>
         </div>
-      </div>
 
-      <!-- Loading / Empty States -->
-      <div id="tableLoading" class="py-20 flex flex-col items-center justify-center hidden">
-        <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-        <p class="mt-4 text-secondary font-label text-xs tracking-widest">LOADING DATASET...</p>
-      </div>
-      <div id="tableEmpty" class="py-20 flex flex-col items-center justify-center hidden">
-        <span class="material-symbols-outlined text-4xl text-secondary/20 mb-2">database_off</span>
-        <p class="text-secondary font-label text-xs tracking-widest uppercase">No records found</p>
-      </div>
+        <div id="status" class="text-center p-5 rounded-2xl bg-slate-800 border-2 border-transparent text-[11px] font-black tracking-[0.2em] hidden shadow-inner"></div>
 
+        <!-- Troubleshooting -->
+        <div id="troubleshooting" class="p-6 bg-red-900/10 border border-red-900/30 rounded-2xl space-y-4 hidden animate-pulse">
+            <div class="flex items-center gap-2 text-red-500 font-black text-[10px] uppercase tracking-widest">
+                <span class="material-symbols-outlined text-sm">warning</span>
+                <span>System Diagnosis Required</span>
+            </div>
+            <ul class="text-[10px] text-slate-400 space-y-2 list-none px-1">
+                <li class="flex gap-2"><span class="text-red-500">01.</span> Logout of secondary Google accounts.</li>
+                <li class="flex gap-2"><span class="text-red-500">02.</span> Check Safari > Settings > Camera: "Allow".</li>
+                <li class="flex gap-2"><span class="text-red-500">03.</span> Use Incognito/Private mode.</li>
+            </ul>
+        </div>
     </div>
-  </main>
 
-  <!-- Status Bar / Toast -->
-  <div id="toast" class="fixed bottom-6 right-6 hidden transform translate-y-20 opacity-0 transition-all duration-300 z-[200]">
-    <div id="toastContent" class="px-6 py-4 rounded-xl shadow-2xl border flex items-center space-x-3 bg-surface-container-highest border-outline-variant/20">
-      <span id="toastIcon" class="material-symbols-outlined">info</span>
-      <p id="toastMsg" class="font-bold text-sm"></p>
-    </div>
-  </div>
+    <script>
+        let html5QrCode = null;
 
-  <script>
-    // State
-    let currentView = 'lifecycle';
+        window.onload = () => {
+            // Priority 1: URL Parameters (Auto-Config)
+            const params = new URLSearchParams(window.location.search);
+            const paramUrl = params.get('url');
+            const paramToken = params.get('token');
 
-    function toggleSidebar(open) {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
-      if (open) {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-        overlay.classList.add('block');
-        setTimeout(() => {
-          overlay.classList.remove('opacity-0');
-          overlay.classList.add('opacity-100');
-        }, 10);
-      } else {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.remove('opacity-100');
-        overlay.classList.add('opacity-0');
-        setTimeout(() => {
-          overlay.classList.add('hidden');
-          overlay.classList.remove('block');
-        }, 300);
-      }
-    }
-    let rawData = [];
-    let filteredData = [];
-    let viewMetrics = {};
-    let chart1Instance = null;
-    let chart2Instance = null;
-    let sortCol = '';
-    let sortAsc = true;
+            if (paramUrl) localStorage.setItem('kinetic_script_url', paramUrl);
+            if (paramToken) localStorage.setItem('kinetic_api_token', paramToken);
 
-    // View Configs
-    const VIEWS = {
-      'lifecycle': {
-        title: 'Order Lifecycle',
-        subtitle: 'End-to-end order tracking',
-        func: 'getOrderLifecycleData',
-        headers: ['Order ID', 'Date', 'Channel', 'Product', 'Status', 'Lead Time', 'Action'],
-        fields: ['merchant-order-id', 'purchase-date', 'sales-channel', 'product-name', 'fulfillment-status', 'lead-time', '_action_notify']
-      },
-      'shipping-perf': {
-        title: 'Shipping Performance',
-        subtitle: 'Logistics efficiency metrics',
-        func: 'getShippingPerformanceData',
-        headers: ['Order ID', 'Channel', 'Carrier', 'Country', 'Ship Date', 'Delivered', 'Delay (Days)'],
-        fields: ['merchant-order-id', 'channel', 'carrier-us', 'delivery-country', 'us-ship-date', 'delivered-date', 'shipping-delay']
-      },
-      'revenue': {
-        title: 'Revenue & Channels',
-        subtitle: 'Financial performance breakdown',
-        func: 'getRevenueData',
-        headers: ['Channel', 'Revenue', 'Units', 'Avg Order Value', 'Refunds'],
-        fields: ['channel', 'revenue', 'units', 'avgOrderValue', 'totalRefundAmount']
-      },
-      'exceptions': {
-        title: 'Exception Orders',
-        subtitle: 'Critical issues requiring attention',
-        func: 'getExceptionData',
-        headers: ['Order ID', 'Email', 'SKU', 'Status', 'Refund', 'Delay', 'Notes'],
-        fields: ['merchant-order-id', 'buyer-email', 'sku', 'outbound-status', 'refund-amount', 'shipping-delay', 'notes']
-      },
-      'product-perf': {
-        title: 'Product Performance',
-        subtitle: 'SKU-level performance insights',
-        func: 'getProductPerformanceData',
-        headers: ['SKU', 'Channel', 'Revenue', 'Units', 'Refunds', 'Return Rate'],
-        fields: ['sku', 'channel', 'revenue', 'units', 'refundCount', 'returnRate']
-      },
-      'inventory': {
-        title: 'Inventory & Supply',
-        subtitle: 'Real-time stock vs demand tracking',
-        func: 'getInventoryStatusData',
-        headers: ['SKU', 'Supply', 'Pending Demand', 'Net Inventory', 'Status'],
-        fields: ['sku', 'supply', 'demand', 'net', 'status']
-      },
-      'pending-sn': {
-        title: 'Pending Serial Numbers',
-        subtitle: 'Orders awaiting S/N assignment',
-        func: 'fetchAllPendingSN',
-        headers: ['Channel', 'Order ID', 'Model', 'Specs', 'Qty', 'Action'],
-        fields: ['channel', 'orderId', 'model', 'specs', 'qty', '_action_sn']
-      },
-      'pending-shipping': {
-        title: 'Pending Shipping',
-        subtitle: 'Orders ready for fulfillment',
-        func: 'fetchAllPendingShipping',
-        headers: ['Channel', 'Order ID', 'Status', 'Action'],
-        fields: ['channel', 'orderId', 'status', '_action_ship']
-      }
-    };
+            // Priority 2: Local Storage
+            const savedUrl = localStorage.getItem('kinetic_script_url');
+            const savedToken = localStorage.getItem('kinetic_api_token');
 
-    window.onload = () => {
-      console.log('App initialized. Switching to default view...');
-      switchView('lifecycle');
-      initScannerConfig();
-    };
+            if (savedUrl) document.getElementById('scriptUrl').value = savedUrl;
+            if (savedToken) document.getElementById('apiToken').value = savedToken;
 
-    function initScannerConfig() {
-      google.script.run.withSuccessHandler(config => {
-        if (config && config.url && config.token) {
-          const el = document.getElementById('scannerNavLink');
-          const baseUrl = "https://frankwerd.github.io/standalone-scanner/";
-          el.href = `${baseUrl}?url=${encodeURIComponent(config.url)}&token=${encodeURIComponent(config.token)}`;
-        }
-      }).getScannerConfig();
-    }
-
-    function switchView(viewId) {
-      currentView = viewId;
-      toggleSidebar(false);
-
-      // UI Update
-      document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.remove('bg-[#1e1f26]', 'text-[#FF7F29]', 'border-l-4', 'border-[#FF7F29]');
-        el.classList.add('text-[#c6c6cf]');
-      });
-      const active = document.getElementById(`nav-${viewId}`);
-      if (active) {
-        active.classList.add('bg-[#1e1f26]', 'text-[#FF7F29]', 'border-l-4', 'border-[#FF7F29]');
-        active.classList.remove('text-[#c6c6cf]');
-      }
-
-      const config = VIEWS[viewId];
-      document.getElementById('viewTitle').innerText = config.title;
-      document.getElementById('viewSubtitle').innerText = config.subtitle;
-
-      // Toggle containers
-      const tableContainer = document.getElementById('tableContainer');
-      const chartsContainer = document.getElementById('chartsContainer');
-
-      if (tableContainer) tableContainer.classList.remove('hidden');
-      // chartsContainer visibility is handled by renderCharts()
-      refreshCurrentView();
-    }
-
-    function handleTimeFilterChange() {
-      const filter = document.getElementById('timeFilter').value;
-      const customRange = document.getElementById('customDateRange');
-      if (filter === 'CUSTOM') {
-        customRange.classList.remove('hidden');
-      } else {
-        customRange.classList.add('hidden');
-        refreshCurrentView();
-      }
-    }
-
-    function refreshCurrentView() {
-      const config = VIEWS[currentView];
-      if (!config || config.func === 'null') {
-        return;
-      }
-      setLoading(true);
-
-      const timeFilter = document.getElementById('timeFilter').value;
-      let startDate = null;
-      let endDate = null;
-
-      if (timeFilter === 'CUSTOM') {
-        startDate = document.getElementById('startDate').value;
-        endDate = document.getElementById('endDate').value;
-      } else if (timeFilter !== 'ALL') {
-        const now = new Date();
-        const end = new Date(now.setHours(23, 59, 59, 999));
-        let start = new Date();
-        start.setHours(0, 0, 0, 0);
-
-        if (timeFilter === 'WEEK') start.setDate(start.getDate() - 7);
-        else if (timeFilter === 'MONTH') start.setDate(start.getDate() - 30);
-        else if (timeFilter === 'YEAR') start.setDate(start.getDate() - 365);
-        // TODAY is already set by default start
-
-        startDate = start.toISOString();
-        endDate = end.toISOString();
-      }
-
-      const payload = { startDate, endDate };
-
-      google.script.run
-        .withSuccessHandler(res => {
-          if (res.success) {
-            rawData = res.data || [];
-            viewMetrics = res.metrics || {};
-            applyLocalFilters();
-          } else {
-            showToast(res.message || 'Failed to fetch data', true);
-          }
-          setLoading(false);
-        })
-        .withFailureHandler(err => {
-          showToast(err.message || 'Server-side error occurred', true);
-          setLoading(false);
-        })
-        [config.func](payload);
-    }
-
-    function applyLocalFilters() {
-      const search = document.getElementById('globalSearch').value.toLowerCase();
-      const channel = document.getElementById('channelFilter').value;
-      const config = VIEWS[currentView];
-
-      filteredData = rawData.filter(item => {
-        const matchesChannel = channel === 'ALL' || (item.channel === channel || item['sales-channel'] === channel);
-        if (!matchesChannel) return false;
-
-        if (!search) return true;
-        return Object.values(item).some(val =>
-          String(val).toLowerCase().includes(search)
-        );
-      });
-
-      if (sortCol) {
-        filteredData.sort((a, b) => {
-          let vA = a[sortCol];
-          let vB = b[sortCol];
-          if (typeof vA === 'string') vA = vA.toLowerCase();
-          if (typeof vB === 'string') vB = vB.toLowerCase();
-          if (vA < vB) return sortAsc ? -1 : 1;
-          if (vA > vB) return sortAsc ? 1 : -1;
-          return 0;
-        });
-      }
-
-      renderTable();
-      renderMetrics();
-      renderCharts();
-    }
-
-    function renderCharts() {
-      const container = document.getElementById('chartsContainer');
-      const ctx1 = document.getElementById('chart1').getContext('2d');
-      const ctx2 = document.getElementById('chart2').getContext('2d');
-      const config = VIEWS[currentView];
-
-      if (chart1Instance) { chart1Instance.destroy(); chart1Instance = null; }
-      if (chart2Instance) { chart2Instance.destroy(); chart2Instance = null; }
-
-      if (filteredData.length === 0) {
-        container.classList.add('hidden');
-        return;
-      }
-      container.classList.remove('hidden');
-
-      if (currentView === 'lifecycle' || currentView === 'shipping-perf' || currentView === 'exceptions') {
-        // Status Distribution
-        const statusCounts = {};
-        const field = currentView === 'lifecycle' ? 'fulfillment-status' : (currentView === 'shipping-perf' ? 'outbound-status' : 'status');
-        filteredData.forEach(r => {
-          const s = r[field] || 'Unknown';
-          statusCounts[s] = (statusCounts[s] || 0) + 1;
-        });
-
-        document.getElementById('chart1Title').innerText = 'STATUS DISTRIBUTION';
-        chart1Instance = new Chart(ctx1, {
-          type: 'doughnut',
-          data: {
-            labels: Object.keys(statusCounts),
-            datasets: [{
-              data: Object.values(statusCounts),
-              backgroundColor: ['#ffb68e', '#e2e1eb', '#c6c6cf', '#45464e', '#ff7f29', '#ffdad6'],
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'right', labels: { color: '#c6c6cf', font: { family: 'Inter', size: 10 } } } }
-          }
-        });
-
-        // Channel Distribution
-        const channelCounts = {};
-        filteredData.forEach(r => {
-          const c = r['channel'] || r['sales-channel'] || 'Unknown';
-          channelCounts[c] = (channelCounts[c] || 0) + 1;
-        });
-
-        document.getElementById('chart2Title').innerText = 'CHANNEL VOLUME';
-        chart2Instance = new Chart(ctx2, {
-          type: 'bar',
-          data: {
-            labels: Object.keys(channelCounts),
-            datasets: [{
-              label: 'Orders',
-              data: Object.values(channelCounts),
-              backgroundColor: '#ffb68e'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(226, 225, 235, 0.05)' }, ticks: { color: '#c6c6cf' } },
-              x: { grid: { display: false }, ticks: { color: '#c6c6cf' } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      } else if (currentView === 'revenue' || currentView === 'product-perf' || currentView === 'inventory') {
-        if (currentView === 'inventory') {
-          // Supply vs Demand Bar Chart
-          const labels = filteredData.map(r => r.sku);
-          const supplyData = filteredData.map(r => r.supply);
-          const demandData = filteredData.map(r => r.demand);
-
-          document.getElementById('chart1Title').innerText = 'STOCK LEVELS BY SKU';
-          chart1Instance = new Chart(ctx1, {
-            type: 'bar',
-            data: {
-              labels: labels,
-              datasets: [{
-                label: 'Supply',
-                data: supplyData,
-                backgroundColor: '#ffb68e'
-              }, {
-                label: 'Demand',
-                data: demandData,
-                backgroundColor: '#ff7f29'
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(226, 225, 235, 0.05)' }, ticks: { color: '#c6c6cf' } },
-                x: { grid: { display: false }, ticks: { color: '#c6c6cf' } }
-              },
-              plugins: { legend: { labels: { color: '#c6c6cf' } } }
+            if (savedUrl && savedToken) {
+                toggleConfig(false);
+                // If we got parameters, auto-start the scanner
+                if (paramUrl || paramToken) {
+                    showStatus("AUTO-CONFIG LOADED", "success");
+                    startScanner();
+                }
+            } else {
+                toggleConfig(true);
             }
-          });
+        };
 
-          // Net Inventory
-          const netData = filteredData.map(r => r.net);
-          document.getElementById('chart2Title').innerText = 'NET INVENTORY (STOCK - PENDING)';
-          chart2Instance = new Chart(ctx2, {
-            type: 'bar',
-            data: {
-              labels: labels,
-              datasets: [{
-                label: 'Net',
-                data: netData,
-                backgroundColor: netData.map(v => v >= 0 ? '#ffb68e' : '#ffb4ab')
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: { grid: { color: 'rgba(226, 225, 235, 0.05)' }, ticks: { color: '#c6c6cf' } },
-                x: { grid: { display: false }, ticks: { color: '#c6c6cf' } }
-              },
-              plugins: { legend: { display: false } }
+        function toggleConfig(force) {
+            const content = document.getElementById('configContent');
+            const chevron = document.getElementById('configChevron');
+            const isHidden = force !== undefined ? !force : !content.classList.contains('hidden');
+
+            if (isHidden) {
+                content.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
             }
-          });
-          return;
         }
 
-        // Revenue Bar Chart
-        const labels = filteredData.map(r => r.channel || r.sku || 'Unknown');
-        const data = filteredData.map(r => r.revenue || 0);
+        async function startScanner() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            const token = document.getElementById('apiToken').value.trim();
 
-        document.getElementById('chart1Title').innerText = currentView === 'revenue' ? 'REVENUE BY CHANNEL' : 'TOP SKUs BY REVENUE';
-        chart1Instance = new Chart(ctx1, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Revenue',
-              data: data,
-              backgroundColor: '#ffb68e'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(226, 225, 235, 0.05)' }, ticks: { color: '#c6c6cf' } },
-              x: { grid: { display: false }, ticks: { color: '#c6c6cf' } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
+            if (!url || !token) {
+                showStatus("ERROR: CONFIG REQUIRED BEFORE SCANNING", "error");
+                toggleConfig(true);
+                return;
+            }
 
-        // Units Bar Chart
-        const unitData = filteredData.map(r => r.units || 0);
-        document.getElementById('chart2Title').innerText = 'VOLUME BY UNITS';
-        chart2Instance = new Chart(ctx2, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Units',
-              data: unitData,
-              backgroundColor: '#c6c6cf'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { beginAtZero: true, grid: { color: 'rgba(226, 225, 235, 0.05)' }, ticks: { color: '#c6c6cf' } },
-              x: { grid: { display: false }, ticks: { color: '#c6c6cf' } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      } else {
-        container.classList.add('hidden');
-      }
-    }
+            document.getElementById('readerPlaceholder').classList.add('hidden');
+            html5QrCode = new Html5Qrcode("reader");
 
-    function setSort(col) {
-      if (sortCol === col) {
-        sortAsc = !sortAsc;
-      } else {
-        sortCol = col;
-        sortAsc = true;
-      }
-      renderTable(); // Re-render headers to show sort icon if desired
-      applyLocalFilters();
-    }
+            // Responsive Scan Box (Larger on Mobile)
+            const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
+                const widthPercentage = 0.95; 
+                const heightPercentage = 0.6;
+                return {
+                    width: Math.floor(viewfinderWidth * widthPercentage),
+                    height: Math.floor(viewfinderHeight * heightPercentage)
+                };
+            }
 
-    function renderTable() {
-      const head = document.getElementById('tableHead');
-      const body = document.getElementById('tableBody');
-      const config = VIEWS[currentView];
-
-      // Headers
-      let headHtml = '<tr>';
-      config.headers.forEach((h, i) => {
-        const field = config.fields[i];
-        const isSorted = sortCol === field;
-        const icon = isSorted ? (sortAsc ? 'expand_less' : 'expand_more') : 'unfold_more';
-        headHtml += `<th onclick="setSort('${field}')" class="px-6 py-3 font-label text-[10px] font-bold text-secondary tracking-widest uppercase cursor-pointer hover:bg-surface-container-high transition-colors">
-          <div class="flex items-center gap-1">
-            ${h}
-            <span class="material-symbols-outlined text-[14px] ${isSorted ? 'text-primary' : 'text-secondary/20'}">${icon}</span>
-          </div>
-        </th>`;
-      });
-      headHtml += '</tr>';
-      head.innerHTML = headHtml;
-
-      // Body
-      if (filteredData.length === 0) {
-        body.innerHTML = '';
-        document.getElementById('tableEmpty').classList.remove('hidden');
-        return;
-      }
-      document.getElementById('tableEmpty').classList.add('hidden');
-
-      let bodyHtml = '';
-      filteredData.forEach(row => {
-        bodyHtml += '<tr class="hover:bg-surface-container-highest transition-colors">';
-
-        config.fields.forEach(field => {
-          let val = row[field];
-
-          // Formatting Logic
-          if ((field.includes('date') || field.includes('-at')) && val && String(val).includes('T')) {
-             try {
-               const d = new Date(val);
-               if (!isNaN(d.getTime())) {
-                 val = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-               }
-             } catch(e) {}
-          }
-
-          if (field === 'fulfillment-status' || field === 'status') {
-            const colors = {
-              'DELIVERED': 'bg-primary/20 text-primary',
-              'US_SHIPPED': 'bg-blue-500/20 text-blue-400',
-              'KR_SHIPPED': 'bg-indigo-500/20 text-indigo-400',
-              'HUB_RECEIVED': 'bg-purple-500/20 text-purple-400',
-              'PENDING_SHIPPING': 'bg-yellow-500/20 text-yellow-400',
-              'CREATED': 'bg-secondary/20 text-secondary',
-              'EXCEPTION': 'bg-red-500/20 text-red-400',
-              'HOLD': 'bg-orange-500/20 text-orange-400',
-              'CANCELLED': 'bg-gray-500/20 text-gray-400',
-              'IN_STOCK': 'bg-primary/20 text-primary',
-              'BACKORDERED': 'bg-error-container text-on-error-container'
+            const config = {
+                fps: 20,
+                qrbox: qrboxFunction,
+                // Removed aspectRatio 1.0 to allow natural rectangular feed
+                formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.EAN_13
+                ] : [], // Fallback to all formats if variable not loaded
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { min: 640, ideal: 1280, max: 1920 },
+                    height: { min: 480, ideal: 720, max: 1080 }
+                }
             };
-            val = `<span class="inline-flex items-center gap-2 ${colors[val] || 'bg-secondary/10 text-secondary/60'} px-3 py-1 rounded-full font-label text-[9px] font-bold tracking-wider uppercase">${val}</span>`;
-          } else if (field === 'revenue' || field === 'total-amount' || field === 'avgOrderValue' || field === 'refund-amount' || field === 'totalRefundAmount') {
-            val = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
-          } else if (field === 'shipping-delay' && val > 3) {
-            val = `<span class="text-error font-bold">${val} Days</span>`;
-          } else if (field === '_action_sn') {
-            val = `<div class="flex gap-2">
-                    <input type="text" id="sn-${row.orderId}-${row.channel}" placeholder="S/N..." class="bg-surface-container-lowest border-none rounded px-2 py-1 text-xs w-24">
-                    <button onclick="handleAssign('${row.orderId}', '${row.channel}')" class="bg-primary-container text-on-primary-fixed px-2 py-1 rounded text-[10px] font-bold">SET</button>
-                  </div>`;
-          } else if (field === '_action_ship') {
-             val = `<div class="flex flex-col gap-1">
-                      <div class="flex gap-1">
-                        <input type="text" id="trk-${row.orderId}-${row.channel}" placeholder="TRK#" class="bg-surface-container-lowest border-none rounded px-2 py-1 text-xs flex-grow">
-                        <select id="car-${row.orderId}-${row.channel}" class="bg-surface-container-lowest border-none rounded px-1 py-1 text-[10px] text-secondary">
-                          <option value="FEDEX">FDX</option>
-                          <option value="UPS">UPS</option>
-                          <option value="DHL">DHL</option>
-                          <option value="USPS">USPS</option>
-                        </select>
-                      </div>
-                      <div class="flex gap-1">
-                        <select id="status-${row.orderId}-${row.channel}" class="bg-surface-container-lowest border-none rounded px-1 py-1 text-[9px] text-primary font-bold flex-grow">
-                          <option value="US_SHIPPED">US_SHIPPED</option>
-                          <option value="KR_SHIPPED">KR_SHIPPED</option>
-                          <option value="HUB_RECEIVED">HUB_RECEIVED</option>
-                          <option value="DELIVERED">DELIVERED</option>
-                          <option value="EXCEPTION">EXCEPTION</option>
-                          <option value="HOLD">HOLD</option>
-                          <option value="CANCELLED">CANCELLED</option>
-                          <option value="CREATED">CREATED</option>
-                          <option value="PENDING_SHIPPING">PENDING_SHIPPING</option>
-                        </select>
-                        <button onclick="handleShipDropdown('${row.orderId}', '${row.channel}')" class="bg-primary/20 text-primary px-2 py-1 rounded text-[9px] font-bold">SET</button>
-                      </div>
-                    </div>`;
-          } else if (field === '_action_notify') {
-             val = `<button onclick="handleNotifyCustomer('${row.orderId}', '${row.channel || row['sales-channel']}')" class="flex items-center gap-1 bg-surface-container-highest hover:bg-primary/20 text-secondary hover:text-primary px-3 py-1.5 rounded text-[10px] font-bold transition-all">
-                      <span class="material-symbols-outlined text-[14px]">mail</span>
-                      NOTIFY
-                    </button>`;
-          }
 
-          bodyHtml += `<td class="px-6 py-4 text-xs ${field.includes('id') ? 'font-mono' : ''}">${val || '-'}</td>`;
-        });
+            const onSuccess = (decodedText) => {
+                document.getElementById('manualSku').value = decodedText;
+                if (navigator.vibrate) navigator.vibrate(100);
+                submitScan(decodedText);
+            };
 
-        bodyHtml += '</tr>';
-      });
-      body.innerHTML = bodyHtml;
-    }
-
-    function renderMetrics() {
-      const container = document.getElementById('viewMetrics');
-      container.innerHTML = '';
-
-      if (!viewMetrics || Object.keys(viewMetrics).length === 0) return;
-
-      Object.keys(viewMetrics).forEach(key => {
-        let val = viewMetrics[key];
-        if (typeof val === 'number') {
-           if (key.toLowerCase().includes('revenue') || key.toLowerCase().includes('amount') || key === 'avgOrderValue') {
-             val = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-           }
+            try {
+                document.getElementById('controls').scrollIntoView({ behavior: 'smooth' });
+                // Multi-stage fallback
+                try {
+                    await html5QrCode.start({ facingMode: { exact: "environment" } }, config, onSuccess);
+                } catch (e) {
+                    try {
+                        await html5QrCode.start({ facingMode: "environment" }, config, onSuccess);
+                    } catch (e2) {
+                        await html5QrCode.start({ facingMode: "user" }, config, onSuccess);
+                    }
+                }
+                document.getElementById('scannerIndicator').classList.remove('hidden');
+                document.getElementById('scannerIndicator').classList.add('flex');
+                document.getElementById('stopScannerBtn').classList.remove('hidden');
+                document.getElementById('scanOverlay').classList.remove('hidden');
+            } catch (err) {
+                showStatus(`CAMERA ERROR: ${err.message}`, "error");
+                document.getElementById('readerPlaceholder').classList.remove('hidden');
+                document.getElementById('troubleshooting').classList.remove('hidden');
+            }
         }
 
-        const card = document.createElement('div');
-        card.className = 'text-left md:text-right';
-        card.innerHTML = `
-          <p class="font-label text-[10px] tracking-widest text-secondary/80 uppercase">${key.replace(/([A-Z])/g, ' $1')}</p>
-          <p class="text-2xl font-headline font-bold text-on-surface">${val}</p>
-        `;
-        container.appendChild(card);
-      });
-    }
+        async function stopScanner() {
+            if (html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                } catch (err) {
+                    console.error("Stop failed", err);
+                }
+                document.getElementById('readerPlaceholder').classList.remove('hidden');
+                document.getElementById('scannerIndicator').classList.add('hidden');
+                document.getElementById('scannerIndicator').classList.remove('flex');
+                document.getElementById('stopScannerBtn').classList.add('hidden');
+                document.getElementById('scanOverlay').classList.add('hidden');
+            }
+        }
 
-    function setLoading(show) {
-      const loader = document.getElementById('tableLoading');
-      const body = document.getElementById('tableBody');
-      const refresh = document.getElementById('refreshIndicator');
-      const live = document.getElementById('liveIndicator');
+        function handleManualSubmit() {
+            const sku = document.getElementById('manualSku').value.trim();
+            if (!sku) return showStatus("ERROR: SKU REQUIRED", "error");
+            submitScan(sku);
+        }
 
-      if (show) {
-        loader.classList.remove('hidden');
-        body.classList.add('opacity-10');
-        refresh.classList.remove('hidden');
-        refresh.classList.add('flex');
-        live.classList.add('hidden');
-        live.classList.remove('flex');
-      } else {
-        loader.classList.add('hidden');
-        body.classList.remove('opacity-10');
-        refresh.classList.add('hidden');
-        refresh.classList.remove('flex');
-        live.classList.remove('hidden');
-        live.classList.add('flex');
-      }
-    }
+        async function submitScan(sku) {
+            const url = document.getElementById('scriptUrl').value.trim();
+            const token = document.getElementById('apiToken').value.trim();
+            const action = document.getElementById('scanAction').value;
+            const qty = document.getElementById('scanQty').value || 1;
 
-    function showToast(msg, isError) {
-      const toast = document.getElementById('toast');
-      const msgEl = document.getElementById('toastMsg');
-      const icon = document.getElementById('toastIcon');
+            if (!url || !token) {
+                showStatus("ERROR: CONFIG MISSING", "error");
+                toggleConfig(true);
+                return;
+            }
 
-      if (!msgEl) return;
-      msgEl.innerText = msg;
-      icon.innerText = isError ? 'error' : 'check_circle';
-      icon.className = `material-symbols-outlined ${isError ? 'text-error' : 'text-primary'}`;
+            localStorage.setItem('kinetic_script_url', url);
+            localStorage.setItem('kinetic_api_token', token);
 
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.remove('translate-y-20', 'opacity-0'), 10);
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-        setTimeout(() => toast.classList.add('hidden'), 300);
-      }, 4000);
-    }
+            showStatus(`PROCESSING: ${sku}...`, "processing");
 
-    function handleLogout() {
-      google.script.run.withSuccessHandler(() => window.top.location.reload()).webLogout();
-    }
+            try {
+                    // Use standard fetch without no-cors first to see if we can get a response.
+                    // Google Apps Script usually requires a redirect (302) follow.
+                const response = await fetch(url, {
+                    method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' }, // Using text/plain to stay as 'simple request'
+                    body: JSON.stringify({
+                        sku: sku,
+                        action: action,
+                        token: token,
+                        quantity: parseFloat(qty)
+                    })
+                });
 
-    function handleAssign(orderId, channel) {
-      const sn = document.getElementById(`sn-${orderId}-${channel}`).value;
-      if (!sn) return showToast('Serial number is required', true);
-      google.script.run.withSuccessHandler(res => {
-        showToast(res.message, !res.success);
-        if (res.success) refreshCurrentView();
-      }).assignSerialGlobal(orderId, sn, channel);
-    }
+                    if (response.type === 'opaque') {
+                        showStatus(`TRANSMITTED: ${sku} (NO-CORS MODE)`, "success");
+                    } else {
+                        const resJson = await response.json();
+                        if (resJson.success) {
+                            showStatus(`SUCCESS: ${sku} UPDATED`, "success");
+                        } else {
+                            showStatus(`ERROR: ${resJson.message}`, "error");
+                        }
+                    }
+                document.getElementById('manualSku').value = "";
+            } catch (error) {
+                    console.error("Submission error:", error);
+                    // Fallback for no-cors if standard fails
+                    try {
+                        await fetch(url, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({
+                                sku: sku,
+                                action: action,
+                                token: token,
+                                quantity: parseFloat(qty)
+                            })
+                        });
+                        showStatus(`TRANSMITTED: ${sku}`, "success");
+                        document.getElementById('manualSku').value = "";
+                    } catch (innerError) {
+                        showStatus("NETWORK ERROR", "error");
+                    }
+            }
+        }
 
-    function handleShip(orderId, type, channel) {
-      const trk = document.getElementById(`trk-${orderId}-${channel}`).value;
-      const carElement = document.getElementById(`car-${orderId}-${channel}`);
-      const car = carElement ? carElement.value : 'AUTO';
-      google.script.run.withSuccessHandler(res => {
-        showToast(res.message, !res.success);
-        if (res.success) refreshCurrentView();
-      }).updateTrackingGlobal(orderId, trk, car, type, channel);
-    }
+        function showStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.innerText = msg.toUpperCase();
+            el.classList.remove('hidden', 'text-orange-500', 'text-green-500', 'text-red-500', 'border-orange-500', 'border-green-500', 'border-red-500', 'bg-orange-500/5', 'bg-green-500/5', 'bg-red-500/5');
 
-    function handleShipDropdown(orderId, channel) {
-      const type = document.getElementById(`status-${orderId}-${channel}`).value;
-      handleShip(orderId, type, channel);
-    }
-
-    function handleNotifyCustomer(orderId, channel) {
-      const isDevMode = document.getElementById('devMode').checked;
-      showToast(`Cross-referencing supply for order ${orderId}...`, false);
-      google.script.run.withSuccessHandler(res => {
-        showToast(res.message, !res.success);
-      }).notifyCustomerSupplyGlobal(orderId, channel, isDevMode);
-    }
-  </script>
+            if (type === 'success') {
+                el.classList.add('text-green-500', 'border-green-500', 'bg-green-500/5');
+            } else if (type === 'error') {
+                el.classList.add('text-red-500', 'border-red-500', 'bg-red-500/5');
+            } else {
+                el.classList.add('text-orange-500', 'border-orange-500', 'bg-orange-500/5');
+            }
+            el.classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>
