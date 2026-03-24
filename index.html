@@ -131,6 +131,7 @@
 
     <script>
         let html5QrCode = null;
+        let isProcessingScan = false;
 
         window.onload = () => {
             // Priority 1: URL Parameters (Auto-Config)
@@ -187,16 +188,16 @@
             document.getElementById('readerPlaceholder').classList.add('hidden');
             html5QrCode = new Html5Qrcode("reader");
 
-            // Responsive Scan Box (Larger on Mobile)
+            // Responsive Scan Box (Optimized for Code 128)
             const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
-                const widthPercentage = 0.7;
-                const heightPercentage = 0.3;
+                const widthPercentage = 0.85;
+                const heightPercentage = 0.35;
                 const width = Math.floor(viewfinderWidth * widthPercentage);
                 const height = Math.floor(viewfinderHeight * heightPercentage);
                 // Ensure a minimum size for reliable scanning on small mobile screens
                 return {
-                    width: Math.max(width, 250),
-                    height: Math.max(height, 150)
+                    width: Math.max(width, 260),
+                    height: Math.max(height, 130)
                 };
             }
 
@@ -225,6 +226,12 @@
             };
 
             const onSuccess = (decodedText) => {
+                if (isProcessingScan) return;
+                isProcessingScan = true;
+
+                // Stop scanning immediately to prevent "bugging out" between states
+                try { html5QrCode.pause(); } catch(e) {}
+
                 document.getElementById('manualSku').value = decodedText;
                 if (navigator.vibrate) navigator.vibrate(100);
 
@@ -233,7 +240,7 @@
                 reader.style.borderColor = '#22c55e'; // Tailwind green-500
                 setTimeout(() => {
                     reader.style.borderColor = '#334155'; // Back to slate-700
-                }, 500);
+                }, 1000);
 
                 submitScan(decodedText);
             };
@@ -351,6 +358,8 @@
             if (!url || !token) {
                 showStatus("ERROR: CONFIG MISSING", "error");
                 toggleConfig(true);
+                isProcessingScan = false;
+                try { html5QrCode.resume(); } catch(e) {}
                 return;
             }
 
@@ -359,12 +368,20 @@
 
             showStatus(`PROCESSING: ${sku}...`, "processing");
 
+            const finalize = (msg, type) => {
+                showStatus(msg, type);
+                document.getElementById('manualSku').value = "";
+                // Delay resuming the scanner to allow user to move away from barcode
+                setTimeout(() => {
+                    isProcessingScan = false;
+                    try { html5QrCode.resume(); } catch(e) {}
+                }, 2000);
+            };
+
             try {
-                    // Use standard fetch without no-cors first to see if we can get a response.
-                    // Google Apps Script usually requires a redirect (302) follow.
                 const response = await fetch(url, {
                     method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' }, // Using text/plain to stay as 'simple request'
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         sku: sku,
                         action: action,
@@ -373,37 +390,34 @@
                     })
                 });
 
-                    if (response.type === 'opaque') {
-                        showStatus(`TRANSMITTED: ${sku} (NO-CORS MODE)`, "success");
+                if (response.type === 'opaque') {
+                    finalize(`TRANSMITTED: ${sku} (NO-CORS)`, "success");
+                } else {
+                    const resJson = await response.json();
+                    if (resJson.success) {
+                        finalize(`SUCCESS: ${sku} UPDATED`, "success");
                     } else {
-                        const resJson = await response.json();
-                        if (resJson.success) {
-                            showStatus(`SUCCESS: ${sku} UPDATED`, "success");
-                        } else {
-                            showStatus(`ERROR: ${resJson.message}`, "error");
-                        }
+                        finalize(`ERROR: ${resJson.message}`, "error");
                     }
-                document.getElementById('manualSku').value = "";
+                }
             } catch (error) {
-                    console.error("Submission error:", error);
-                    // Fallback for no-cors if standard fails
-                    try {
-                        await fetch(url, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({
-                                sku: sku,
-                                action: action,
-                                token: token,
-                                quantity: parseFloat(qty)
-                            })
-                        });
-                        showStatus(`TRANSMITTED: ${sku}`, "success");
-                        document.getElementById('manualSku').value = "";
-                    } catch (innerError) {
-                        showStatus("NETWORK ERROR", "error");
-                    }
+                console.error("Submission error:", error);
+                try {
+                    await fetch(url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({
+                            sku: sku,
+                            action: action,
+                            token: token,
+                            quantity: parseFloat(qty)
+                        })
+                    });
+                    finalize(`TRANSMITTED: ${sku}`, "success");
+                } catch (innerError) {
+                    finalize("NETWORK ERROR", "error");
+                }
             }
         }
 
