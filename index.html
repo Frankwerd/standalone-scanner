@@ -47,7 +47,7 @@
             <div id="scanOverlay" class="hidden absolute inset-0 pointer-events-none flex items-center justify-center z-20">
                 <div class="text-[10px] font-black text-white bg-black/60 px-4 py-2 rounded-full uppercase tracking-widest border border-white/20 shadow-2xl backdrop-blur-sm">Center Barcode in Box</div>
             </div>
-            
+
             <!-- Tap to Start Fallback -->
             <div id="tapToStart" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md z-30 cursor-pointer animate-in fade-in duration-500" onclick="startScanner()">
                 <div class="w-24 h-24 bg-orange-500/20 rounded-full flex items-center justify-center mb-4 border border-orange-500/50 animate-pulse">
@@ -181,8 +181,8 @@
 
             // Responsive Scan Box (Larger on Mobile)
             const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
-                const widthPercentage = 0.95; 
-                const heightPercentage = 0.6;
+                const widthPercentage = 0.8;
+                const heightPercentage = 0.3;
                 const width = Math.floor(viewfinderWidth * widthPercentage);
                 const height = Math.floor(viewfinderHeight * heightPercentage);
                 // Ensure a minimum size for reliable scanning on small mobile screens
@@ -195,7 +195,8 @@
             const config = {
                 fps: 20,
                 qrbox: qrboxFunction,
-                // Removed aspectRatio 1.0 to allow natural rectangular feed
+                aspectRatio: 1.777778,
+                useBarCodeDetectorIfSupported: true,
                 formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
                     Html5QrcodeSupportedFormats.CODE_128,
                     Html5QrcodeSupportedFormats.QR_CODE,
@@ -212,13 +213,21 @@
             const onSuccess = (decodedText) => {
                 document.getElementById('manualSku').value = decodedText;
                 if (navigator.vibrate) navigator.vibrate(100);
+
+                // UI Feedback: Flash green border on success
+                const reader = document.getElementById('reader');
+                reader.style.borderColor = '#22c55e'; // Tailwind green-500
+                setTimeout(() => {
+                    reader.style.borderColor = '#334155'; // Back to slate-700
+                }, 500);
+
                 submitScan(decodedText);
             };
 
             try {
                 document.getElementById('controls').scrollIntoView({ behavior: 'smooth' });
                 document.getElementById('tapToStart').classList.add('hidden');
-                
+
                 // Multi-stage fallback
                 try {
                     await html5QrCode.start({ facingMode: { exact: "environment" } }, config, onSuccess);
