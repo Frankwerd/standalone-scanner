@@ -30,12 +30,12 @@
             <div id="configContent" class="hidden space-y-3 pt-2">
                 <div>
                     <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Google Script URL</label>
-                    <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec" 
+                    <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"
                            class="w-full bg-slate-900 border-none rounded-lg p-3 text-xs focus:ring-1 focus:ring-orange-500 transition-all outline-none">
                 </div>
                 <div>
                     <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">OMS API Token</label>
-                    <input type="password" id="apiToken" placeholder="Enter Token..." 
+                    <input type="password" id="apiToken" placeholder="Enter Token..."
                            class="w-full bg-slate-900 border-none rounded-lg p-3 text-xs focus:ring-1 focus:ring-orange-500 transition-all outline-none">
                 </div>
             </div>
@@ -64,7 +64,7 @@
                 </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Quantity</label>
-                    <input type="number" id="scanQty" value="1" min="1" 
+                    <input type="number" id="scanQty" value="1" min="1"
                            class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-orange-500 outline-none text-center">
                 </div>
             </div>
@@ -72,7 +72,7 @@
             <div class="space-y-2">
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Manual SKU Entry</label>
                 <div class="flex gap-2">
-                    <input type="text" id="manualSku" placeholder="WAITING FOR SCAN..." 
+                    <input type="text" id="manualSku" placeholder="WAITING FOR SCAN..."
                            class="flex-1 bg-slate-900 border-none rounded-xl p-4 text-sm font-mono tracking-wider focus:ring-1 focus:ring-orange-500 outline-none uppercase placeholder:text-slate-700">
                     <button onclick="handleManualSubmit()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 rounded-xl font-black text-xs uppercase tracking-widest transition-all">Submit</button>
                 </div>
@@ -104,7 +104,7 @@
             const savedToken = localStorage.getItem('kinetic_api_token');
             if (savedUrl) document.getElementById('scriptUrl').value = savedUrl;
             if (savedToken) document.getElementById('apiToken').value = savedToken;
-            
+
             if (savedUrl && savedToken) {
                 // If config exists, hide it by default
                 toggleConfig(false);
@@ -117,7 +117,7 @@
             const content = document.getElementById('configContent');
             const chevron = document.getElementById('configChevron');
             const isHidden = force !== undefined ? !force : !content.classList.contains('hidden');
-            
+
             if (isHidden) {
                 content.classList.add('hidden');
                 chevron.style.transform = 'rotate(0deg)';
@@ -128,11 +128,31 @@
         }
 
         async function startScanner() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            const token = document.getElementById('apiToken').value.trim();
+
+            if (!url || !token) {
+                showStatus("ERROR: CONFIG REQUIRED BEFORE SCANNING", "error");
+                toggleConfig(true);
+                return;
+            }
+
             document.getElementById('readerPlaceholder').classList.add('hidden');
             html5QrCode = new Html5Qrcode("reader");
-            
-            const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-            
+
+            // Optimized for Code 128 (linear barcodes)
+            const config = {
+                fps: 20,
+                qrbox: { width: 300, height: 150 }, // Wider and shorter for linear barcodes
+                aspectRatio: 1.0,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.EAN_13
+                ]
+            };
+
             const onSuccess = (decodedText) => {
                 document.getElementById('manualSku').value = decodedText;
                 if (navigator.vibrate) navigator.vibrate(100);
@@ -181,14 +201,11 @@
             showStatus(`PROCESSING: ${sku}...`, "processing");
 
             try {
-                // Using text/plain to avoid CORS preflight (Simple Request)
+                    // Use standard fetch without no-cors first to see if we can get a response.
+                    // Google Apps Script usually requires a redirect (302) follow.
                 const response = await fetch(url, {
                     method: 'POST',
-                    mode: 'no-cors', // We can't see result but we can fire it. 
-                    // To actually see result, GAS needs to handle OPTIONS or we use JSONP (not great).
-                    // Or set GAS up to allow CORS. 
-                    // Re-attempting standard fetch first.
-                    headers: { 'Content-Type': 'text/plain' },
+                        headers: { 'Content-Type': 'text/plain' }, // Using text/plain to stay as 'simple request'
                     body: JSON.stringify({
                         sku: sku,
                         action: action,
@@ -197,14 +214,37 @@
                     })
                 });
 
-                // Since we use no-cors, we won't know if it failed. 
-                // However, for this specific use case, we assume it went through if no network error.
-                showStatus(`TRANSMITTED: ${sku}`, "success");
+                    if (response.type === 'opaque') {
+                        showStatus(`TRANSMITTED: ${sku} (NO-CORS MODE)`, "success");
+                    } else {
+                        const resJson = await response.json();
+                        if (resJson.success) {
+                            showStatus(`SUCCESS: ${sku} UPDATED`, "success");
+                        } else {
+                            showStatus(`ERROR: ${resJson.message}`, "error");
+                        }
+                    }
                 document.getElementById('manualSku').value = "";
-                
-                // Refresh list if needed (future)
             } catch (error) {
-                showStatus("NETWORK ERROR", "error");
+                    console.error("Submission error:", error);
+                    // Fallback for no-cors if standard fails
+                    try {
+                        await fetch(url, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({
+                                sku: sku,
+                                action: action,
+                                token: token,
+                                quantity: parseFloat(qty)
+                            })
+                        });
+                        showStatus(`TRANSMITTED: ${sku}`, "success");
+                        document.getElementById('manualSku').value = "";
+                    } catch (innerError) {
+                        showStatus("NETWORK ERROR", "error");
+                    }
             }
         }
 
@@ -212,7 +252,7 @@
             const el = document.getElementById('status');
             el.innerText = msg.toUpperCase();
             el.classList.remove('hidden', 'text-orange-500', 'text-green-500', 'text-red-500', 'border-orange-500', 'border-green-500', 'border-red-500', 'bg-orange-500/5', 'bg-green-500/5', 'bg-red-500/5');
-            
+
             if (type === 'success') {
                 el.classList.add('text-green-500', 'border-green-500', 'bg-green-500/5');
             } else if (type === 'error') {
