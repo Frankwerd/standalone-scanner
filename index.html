@@ -53,7 +53,7 @@
         </div>
 
         <!-- Controls -->
-        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl space-y-6">
+        <div id="controls" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl space-y-6">
             <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-2">
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Action</label>
@@ -100,14 +100,28 @@
         let html5QrCode = null;
 
         window.onload = () => {
+            // Priority 1: URL Parameters (Auto-Config)
+            const params = new URLSearchParams(window.location.search);
+            const paramUrl = params.get('url');
+            const paramToken = params.get('token');
+
+            if (paramUrl) localStorage.setItem('kinetic_script_url', paramUrl);
+            if (paramToken) localStorage.setItem('kinetic_api_token', paramToken);
+
+            // Priority 2: Local Storage
             const savedUrl = localStorage.getItem('kinetic_script_url');
             const savedToken = localStorage.getItem('kinetic_api_token');
+
             if (savedUrl) document.getElementById('scriptUrl').value = savedUrl;
             if (savedToken) document.getElementById('apiToken').value = savedToken;
 
             if (savedUrl && savedToken) {
-                // If config exists, hide it by default
                 toggleConfig(false);
+                // If we got parameters, auto-start the scanner
+                if (paramUrl || paramToken) {
+                    showStatus("AUTO-CONFIG LOADED", "success");
+                    startScanner();
+                }
             } else {
                 toggleConfig(true);
             }
@@ -160,6 +174,7 @@
             };
 
             try {
+                document.getElementById('controls').scrollIntoView({ behavior: 'smooth' });
                 // Multi-stage fallback
                 try {
                     await html5QrCode.start({ facingMode: { exact: "environment" } }, config, onSuccess);
