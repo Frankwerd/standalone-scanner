@@ -201,7 +201,7 @@
             }
 
             const config = {
-                fps: 10,
+                fps: 20, // Reverting to higher FPS for smoother feed, but triggerManualScan handles high-res capture
                 qrbox: qrboxFunction,
                 aspectRatio: 1.777778,
                 disableShading: true,
@@ -214,12 +214,13 @@
                     Html5QrcodeSupportedFormats.EAN_8,
                     Html5QrcodeSupportedFormats.QR_CODE,
                     Html5QrcodeSupportedFormats.CODE_93,
-                    Html5QrcodeSupportedFormats.ITF
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.UPC_A
                 ] : [], // Fallback to all formats if variable not loaded
                 videoConstraints: {
                     facingMode: "environment",
-                    width: { min: 640, ideal: 1280 },
-                    height: { min: 480, ideal: 720 }
+                    width: { min: 640, ideal: 1920, max: 1920 },
+                    height: { min: 480, ideal: 1080, max: 1080 }
                 }
             };
 
@@ -292,25 +293,46 @@
             const video = document.querySelector('#reader video');
             if (!video) return;
 
-            showStatus("MANUAL SCAN TRIGGERED...", "processing");
+            showStatus("ANALYZING FRAME...", "processing");
 
             try {
+                // Technique 1: Native BarcodeDetector (Fast, if supported)
                 if ('BarcodeDetector' in window) {
-                    const formats = ['code_39', 'code_128', 'ean_13', 'ean_8', 'qr_code', 'code_93', 'itf'];
+                    const formats = ['code_39', 'code_128', 'ean_13', 'ean_8', 'qr_code', 'code_93', 'itf', 'upc_a'];
                     const detector = new BarcodeDetector({ formats });
                     const barcodes = await detector.detect(video);
-                    
                     if (barcodes.length > 0) {
                         onSuccess(barcodes[0].rawValue);
                         return;
                     }
                 }
+
+                // Technique 2: High-Resolution Capture + Library Decoding (iOS Fallback)
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert canvas to a File object for scanFileV2
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+                const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
+                
+                try {
+                    const result = await html5QrCode.scanFileV2(file, false);
+                    if (result && result.decodedText) {
+                        onSuccess(result.decodedText);
+                        return;
+                    }
+                } catch (libErr) {
+                    // This often throws if no code found, continue to final error
+                }
+
                 showStatus("NO CODE DETECTED IN FRAME", "error");
-                // Brief vibration for failure if supported
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
             } catch (err) {
-                console.error("Manual scan error:", err);
-                showStatus("SCAN FAILED: USE MANUAL ENTRY", "error");
+                console.error("Manual scan failure:", err);
+                showStatus("SCAN ERROR: USE MANUAL ENTRY", "error");
             }
         }
 
