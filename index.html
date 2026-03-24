@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standalone Inventory Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #reader { width: 100%; max-width: 600px; margin: auto; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 space-y-8">
+        <header class="text-center">
+            <h1 class="text-2xl font-bold text-gray-800">Kinetic Inventory Scanner</h1>
+            <p class="text-sm text-gray-500">Standalone Web Scanner (GitHub Pages Ready)</p>
+        </header>
+
+        <!-- Configuration Section -->
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-4">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-blue-600">Backend Configuration</h2>
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">Google Apps Script Web App URL</label>
+                <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"
+                       class="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">OMS API Token</label>
+                <input type="password" id="apiToken" placeholder="Enter your secret token"
+                       class="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+        </div>
+
+        <!-- Scanner UI -->
+        <div id="reader" class="rounded-lg overflow-hidden border-2 border-dashed border-gray-300"></div>
+
+        <!-- Action Selection -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">Scanning Action</label>
+                <select id="scanAction" class="w-full p-3 bg-white border border-gray-300 rounded shadow-sm focus:ring-2 focus:ring-blue-500">
+                    <option value="Production">Production</option>
+                    <option value="Shipping">Shipping</option>
+                </select>
+            </div>
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">Quantity</label>
+                <input type="number" id="scanQty" value="1" min="1"
+                       class="w-full p-3 border border-gray-300 rounded shadow-sm focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <div id="status" class="text-center text-sm p-4 rounded-lg bg-gray-50 min-h-[60px] flex items-center justify-center italic text-gray-500">
+            Ready to scan...
+        </div>
+
+        <!-- Footer / Logs -->
+        <div class="text-center">
+            <button onclick="clearLogs()" class="text-[10px] text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">Clear Status</button>
+        </div>
+    </div>
+
+    <script>
+        // Persistence
+        window.onload = () => {
+            const savedUrl = localStorage.getItem('kinetic_script_url');
+            const savedToken = localStorage.getItem('kinetic_api_token');
+            if (savedUrl) document.getElementById('scriptUrl').value = savedUrl;
+            if (savedToken) document.getElementById('apiToken').value = savedToken;
+
+            initScanner();
+        };
+
+        const onScanSuccess = (decodedText, decodedResult) => {
+            console.log(`Code scanned = ${decodedText}`, decodedResult);
+            handleSubmit(decodedText);
+        };
+
+        function initScanner() {
+            const html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader",
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                /* verbose= */ false
+            );
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+
+        async function handleSubmit(sku) {
+            const url = document.getElementById('scriptUrl').value;
+            const token = document.getElementById('apiToken').value;
+            const action = document.getElementById('scanAction').value;
+            const qty = document.getElementById('scanQty').value;
+
+            if (!url || !token) {
+                showStatus("Error: Backend URL or API Token missing!", "error");
+                return;
+            }
+
+            // Save for next time
+            localStorage.setItem('kinetic_script_url', url);
+            localStorage.setItem('kinetic_api_token', token);
+
+            showStatus(`Processing SKU: ${sku}...`, "");
+
+            const payload = {
+                token: token,
+                action: 'scan',
+                sku: sku,
+                scanAction: action,
+                quantity: parseInt(qty)
+            };
+
+            try {
+                // Using fetch with no-cors if needed, but since it's a POST to Apps Script,
+                // we usually need a full redirect follow which requires 'cors' and proper headers on the GAS side.
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors', // Standard for GAS Web App POST if CORS isn't explicitly handled
+                    headers: { 'Content-Type': 'text/plain' }, // GAS prefers text/plain or application/x-www-form-urlencoded
+                    body: JSON.stringify(payload)
+                });
+
+                // Note: With 'no-cors', we can't read the response body.
+                // However, we can assume if it didn't throw, it was sent.
+                showStatus(`Successfully sent ${sku} to inventory.`, "success");
+
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showStatus(`Network Error: ${error.message}`, "error");
+            }
+        }
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.innerText = msg;
+            el.className = "text-center text-sm p-4 rounded-lg " +
+                          (type === 'success' ? 'bg-green-100 text-green-700' :
+                           type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700 font-bold');
+        }
+
+        function clearLogs() {
+            document.getElementById('status').innerText = "Ready to scan...";
+            document.getElementById('status').className = "text-center text-sm p-4 rounded-lg bg-gray-50 min-h-[60px] flex items-center justify-center italic text-gray-500";
+        }
+    </script>
+</body>
+</html>
