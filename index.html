@@ -217,18 +217,18 @@
             }
 
             const config = {
-                fps: 20, // Reverting to higher FPS for smoother feed, but triggerManualScan handles high-res capture
+                fps: 30, // Higher FPS for smoother motion tracking
                 qrbox: qrboxFunction,
                 aspectRatio: 1.777778,
                 disableShading: true,
                 rememberLastUsedCamera: true,
-                useBarCodeDetectorIfSupported: true,
+                useBarCodeDetectorIfSupported: false, // Disabling native BarcodeDetector as it can be less accurate than the library's internal decoder for Code 128
                 formatsToSupport: (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
-                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.QR_CODE,
                     Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.QR_CODE,
                     Html5QrcodeSupportedFormats.CODE_93,
                     Html5QrcodeSupportedFormats.ITF,
                     Html5QrcodeSupportedFormats.UPC_A
