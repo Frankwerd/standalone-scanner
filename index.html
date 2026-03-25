@@ -45,7 +45,7 @@
         <div class="relative group">
             <div id="reader" class="rounded-3xl overflow-hidden border-2 border-slate-700 bg-black shadow-2xl min-h-[500px] w-full"></div>
             <div id="scanOverlay" class="hidden absolute inset-0 pointer-events-none flex items-center justify-center z-20">
-                <div class="text-[10px] font-black text-white bg-black/60 px-4 py-2 rounded-full uppercase tracking-widest border border-white/20 shadow-2xl backdrop-blur-sm">Center Barcode in Box</div>
+                <div class="text-[10px] font-black text-white bg-black/60 px-4 py-2 rounded-full uppercase tracking-widest border border-white/20 shadow-2xl backdrop-blur-sm">Center QR Code in Box</div>
             </div>
 
             <!-- Tap to Start Fallback -->
@@ -88,9 +88,10 @@
             <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-2">
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Action</label>
-                    <select id="scanAction" class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold text-orange-500 focus:ring-1 focus:ring-orange-500 outline-none cursor-pointer appearance-none">
+                    <select id="scanAction" onchange="updateUIForAction()" class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold text-orange-500 focus:ring-1 focus:ring-orange-500 outline-none cursor-pointer appearance-none">
                         <option value="Production">🏭 Production</option>
                         <option value="Shipping">📦 Shipping</option>
+                        <option value="Restock">🔄 Restock</option>
                     </select>
                 </div>
                 <div class="space-y-2">
@@ -101,7 +102,7 @@
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Manual SKU Entry</label>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">SKU (Scan or Type)</label>
                 <div class="flex gap-2">
                     <div class="relative flex-1">
                         <input type="text" id="manualSku" placeholder="WAITING FOR SCAN..."
@@ -110,8 +111,45 @@
                             <span class="material-symbols-outlined text-sm">close</span>
                         </button>
                     </div>
-                    <button onclick="handleManualSubmit()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 rounded-xl font-black text-xs uppercase tracking-widest transition-all">Submit</button>
                 </div>
+            </div>
+
+            <!-- Contextual Fields -->
+            <div id="orderIdContainer" class="space-y-2">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Order ID</label>
+                <input type="text" id="orderId" placeholder="Merchant Order ID..."
+                       class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-orange-500 outline-none uppercase">
+            </div>
+
+            <div id="productionFields" class="space-y-2">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Serial Number</label>
+                <input type="text" id="serialNumber" placeholder="Assign S/N..."
+                       class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-orange-500 outline-none uppercase">
+            </div>
+
+            <div id="shippingFields" class="hidden grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Carrier</label>
+                    <select id="carrier" class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold text-orange-500 focus:ring-1 focus:ring-orange-500 outline-none cursor-pointer appearance-none">
+                        <option value="FEDEX">FEDEX</option>
+                        <option value="UPS">UPS</option>
+                        <option value="USPS">USPS</option>
+                        <option value="DHL">DHL</option>
+                        <option value="LOGEN">LOGEN</option>
+                        <option value="ECMS">ECMS</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Tracking #</label>
+                    <input type="text" id="trackingNumber" placeholder="Tracking..."
+                           class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-orange-500 outline-none uppercase">
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="handleManualSubmit()" class="w-full bg-orange-600 hover:bg-orange-500 text-white p-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-95">
+                    Submit Scan Data
+                </button>
             </div>
         </div>
 
@@ -242,6 +280,23 @@
 
             const onSuccess = (decodedText) => {
                 if (isProcessingScan) return;
+
+                // Stop scanning immediately to prevent "bugging out" between states
+                try { html5QrCode.pause(); } catch(e) {}
+
+                const action = document.getElementById('scanAction').value;
+                if (action === 'Restock') {
+                    const qty = prompt(`RESTOCK: How many units for ${decodedText}?`, "1");
+                    if (qty === null || isNaN(parseFloat(qty))) {
+                        showStatus("RESTOCK CANCELLED", "error");
+                        setTimeout(() => {
+                            try { html5QrCode.resume(); } catch(e) {}
+                        }, 1000);
+                        return;
+                    }
+                    document.getElementById('scanQty').value = qty;
+                }
+
                 isProcessingScan = true;
 
                 // Safety fallback: Reset processing flag after 5 seconds if submission hangs
@@ -252,9 +307,6 @@
                         showStatus("READY FOR NEXT SCAN", "success");
                     }
                 }, 5000);
-
-                // Stop scanning immediately to prevent "bugging out" between states
-                try { html5QrCode.pause(); } catch(e) {}
 
                 document.getElementById('manualSku').value = decodedText;
                 if (navigator.vibrate) navigator.vibrate(100);
@@ -395,6 +447,31 @@
             }
         }
 
+        function updateUIForAction() {
+            const action = document.getElementById('scanAction').value;
+            const orderIdContainer = document.getElementById('orderIdContainer');
+            const productionFields = document.getElementById('productionFields');
+            const shippingFields = document.getElementById('shippingFields');
+
+            // Reset
+            orderIdContainer.classList.add('hidden');
+            productionFields.classList.add('hidden');
+            shippingFields.classList.add('hidden');
+
+            if (action === 'Production') {
+                orderIdContainer.classList.remove('hidden');
+                productionFields.classList.remove('hidden');
+            } else if (action === 'Shipping') {
+                orderIdContainer.classList.remove('hidden');
+                shippingFields.classList.remove('hidden');
+            } else if (action === 'Restock') {
+                // For restock, we mostly just need SKU and Qty (already visible)
+            }
+        }
+
+        // Initialize UI
+        updateUIForAction();
+
         function handleManualSubmit() {
             const sku = document.getElementById('manualSku').value.trim();
             if (!sku) return showStatus("ERROR: SKU REQUIRED", "error");
@@ -406,6 +483,10 @@
             const token = document.getElementById('apiToken').value.trim();
             const action = document.getElementById('scanAction').value;
             const qty = document.getElementById('scanQty').value || 1;
+            const orderId = document.getElementById('orderId').value.trim();
+            const serial = document.getElementById('serialNumber').value.trim();
+            const carrier = document.getElementById('carrier').value;
+            const tracking = document.getElementById('trackingNumber').value.trim();
 
             if (!url || !token) {
                 showStatus("ERROR: CONFIG MISSING", "error");
@@ -424,7 +505,7 @@
                 showStatus(msg, type);
                 // We no longer clear the SKU immediately so the user can verify what was scanned.
                 // document.getElementById('manualSku').value = "";
-                
+
                 // Delay resuming the scanner to allow user to move away from barcode
                 setTimeout(() => {
                     isProcessingScan = false;
@@ -432,16 +513,22 @@
                 }, 2000);
             };
 
+            const payload = {
+                sku: sku,
+                action: action,
+                token: token,
+                quantity: parseFloat(qty),
+                orderId: orderId,
+                serial: serial,
+                carrier: carrier,
+                tracking: tracking
+            };
+
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        sku: sku,
-                        action: action,
-                        token: token,
-                        quantity: parseFloat(qty)
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.type === 'opaque') {
@@ -450,6 +537,10 @@
                     const resJson = await response.json();
                     if (resJson.success) {
                         finalize(`SUCCESS: ${sku} UPDATED`, "success");
+                        // Clear inputs for next scan
+                        document.getElementById('orderId').value = "";
+                        document.getElementById('serialNumber').value = "";
+                        document.getElementById('trackingNumber').value = "";
                     } else {
                         finalize(`ERROR: ${resJson.message}`, "error");
                     }
@@ -461,12 +552,7 @@
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({
-                            sku: sku,
-                            action: action,
-                            token: token,
-                            quantity: parseFloat(qty)
-                        })
+                        body: JSON.stringify(payload)
                     });
                     finalize(`TRANSMITTED: ${sku}`, "success");
                 } catch (innerError) {
