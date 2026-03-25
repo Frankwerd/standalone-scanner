@@ -103,8 +103,13 @@
             <div class="space-y-2">
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Manual SKU Entry</label>
                 <div class="flex gap-2">
-                    <input type="text" id="manualSku" placeholder="WAITING FOR SCAN..."
-                           class="flex-1 bg-slate-900 border-none rounded-xl p-4 text-sm font-mono tracking-wider focus:ring-1 focus:ring-orange-500 outline-none uppercase placeholder:text-slate-700">
+                    <div class="relative flex-1">
+                        <input type="text" id="manualSku" placeholder="WAITING FOR SCAN..."
+                               class="w-full bg-slate-900 border-none rounded-xl p-4 text-sm font-mono tracking-wider focus:ring-1 focus:ring-orange-500 outline-none uppercase placeholder:text-slate-700">
+                        <button onclick="document.getElementById('manualSku').value = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400">
+                            <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                    </div>
                     <button onclick="handleManualSubmit()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 rounded-xl font-black text-xs uppercase tracking-widest transition-all">Submit</button>
                 </div>
             </div>
@@ -292,13 +297,13 @@
                         const zoomContainer = document.getElementById('zoomContainer');
                         const zoomSlider = document.getElementById('zoomSlider');
                         const zoomValueLabel = document.getElementById('zoomValue');
-                        
+
                         zoomContainer.classList.remove('hidden');
                         zoomSlider.min = tracks.zoom.min;
                         zoomSlider.max = tracks.zoom.max;
                         zoomSlider.step = tracks.zoom.step;
                         zoomSlider.value = 1; // Default
-                        
+
                         zoomSlider.oninput = async (e) => {
                             const val = e.target.value;
                             zoomValueLabel.innerText = `${parseFloat(val).toFixed(1)}x`;
@@ -342,7 +347,7 @@
 
         async function triggerManualScan() {
             if (!html5QrCode) return;
-            
+
             const video = document.querySelector('#reader video');
             if (!video) return;
 
@@ -366,12 +371,12 @@
                 canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
+
                 // Convert canvas to a File object for scanFileV2
                 // Using image/png for maximum edge sharpness
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
                 const file = new File([blob], "scan.png", { type: "image/png" });
-                
+
                 try {
                     const result = await html5QrCode.scanFileV2(file, false);
                     if (result && result.decodedText) {
@@ -417,7 +422,9 @@
 
             const finalize = (msg, type) => {
                 showStatus(msg, type);
-                document.getElementById('manualSku').value = "";
+                // We no longer clear the SKU immediately so the user can verify what was scanned.
+                // document.getElementById('manualSku').value = "";
+                
                 // Delay resuming the scanner to allow user to move away from barcode
                 setTimeout(() => {
                     isProcessingScan = false;
